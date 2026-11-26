@@ -2,6 +2,7 @@ import { NavigationContainer, createNavigationContainerRef } from '@react-naviga
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import '@expo/metro-runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Login from './componentes/Cadastros/Login';
 import Principal from './componentes/Principal/Principal';

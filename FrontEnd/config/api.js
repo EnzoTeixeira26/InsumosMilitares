@@ -5,7 +5,7 @@ export const VERSAO_ATUAL = 'V_1.8'
 
 const IP_MAQUINA = '10.1.1.232';
 
-const API_PROD = 'https://backend-zfil.onrender.com';
+const API_PROD = process.env.EXPO_PUBLIC_API_URL || 'https://backend-zfil.onrender.com';
 
 const API_LOCAL = `http://${IP_MAQUINA}:8080`;
 const API_LOCAL_WEB = 'http://localhost:8080';
