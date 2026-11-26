@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS usuarios (
+    idUsuarios SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    identificador VARCHAR(20) UNIQUE NOT NULL,
+    patente VARCHAR(50) NOT NULL,
+    ano_entrada VARCHAR(4) NOT NULL,
+    perfil VARCHAR(20) DEFAULT 'OPERADOR' CHECK (perfil IN ('ADMINISTRADOR', 'OPERADOR')),
+    cpf VARCHAR(11) UNIQUE,
+    telefone VARCHAR(15),   
+    email VARCHAR(100) UNIQUE,
+    senha VARCHAR(255) NOT NULL,
+    primeiro_acesso BOOLEAN DEFAULT TRUE,                
+    data_expiracao_senha TIMESTAMP,  
+    observacao TEXT,                    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
