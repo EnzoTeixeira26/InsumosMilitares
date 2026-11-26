@@ -1,7 +1,7 @@
 import { View, Alert, PanResponder, AppState } from 'react-native';
 import { useRef, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { registrarAtividade, TIPO_ATIVIDADE } from '../Services/AtividadeService';
+import { registrarAtividade, TIPO_ATIVIDADE } from '../../Services/AtividadeService';
 
 export const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 
