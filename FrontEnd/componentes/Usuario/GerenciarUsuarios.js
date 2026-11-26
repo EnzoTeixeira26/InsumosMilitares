@@ -12,22 +12,27 @@ export default function GerenciarUsuarios({ navigation }) {
     const [modalVisible, setModalVisible] = useState(false);
     const [usuarioSelecionado, setUsuarioSelecionado] = useState(null);
     const [novoPerfil, setNovoPerfil] = useState('');
+    const [usuarioLogadoId, setUsuarioLogadoId] = useState(null);
 
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [usuarioParaExcluir, setUsuarioParaExcluir] = useState(null);
 
     useEffect(() => {
-        verificarPermissao();
-        carregarUsuarios();
-    }, []);
+        const init = async () => {
+            const perfil = await AsyncStorage.getItem('usuarioPerfil');
+            const idLogado = await AsyncStorage.getItem('usuarioId');
 
-    const verificarPermissao = async () => {
-        const perfil = await AsyncStorage.getItem('usuarioPerfil');
-        if (perfil !== 'ADMINISTRADOR') {
-            Alert.alert('Acesso Negado', 'Apenas administradores podem acessar esta tela.');
-            navigation.goBack();
-        }
-    };
+            if (perfil !== 'ADMINISTRADOR') {
+                Alert.alert('Acesso Negado', 'Apenas administradores podem acessar esta tela.');
+                navigation.goBack();
+                return;
+            }
+
+            setUsuarioLogadoId(idLogado ? parseInt(idLogado) : null);
+            carregarUsuarios();
+        };
+        init();
+    }, []);
 
     const carregarUsuarios = async () => {
         setLoading(true);
@@ -113,46 +118,56 @@ export default function GerenciarUsuarios({ navigation }) {
         return perfil === 'ADMINISTRADOR' ? '#D32F2F' : '#2E7D32';
     };
 
-    const renderUsuario = ({ item }) => (
-        <View style={styles.usuarioCard}>
-            <View style={styles.cardHeader}>
-                <View style={styles.cardHeaderLeft}>
-                    <Ionicons name="person-circle" size={32} color="#FFD700" />
-                    <View>
-                        <Text style={styles.usuarioNome}>{item.nome}</Text>
-                        <Text style={styles.usuarioPatente}>{item.patente}</Text>
+    const renderUsuario = ({ item }) => {
+        // Condição para mostrar o botão de excluir:
+        // 1. Não pode ser o próprio usuário logado (item.id !== usuarioLogadoId)
+        // 2. Não pode ser outro administrador (item.perfil !== 'ADMINISTRADOR')
+        const podeExcluir = item.id !== usuarioLogadoId && item.perfil !== 'ADMINISTRADOR';
+
+        return (
+            <View style={styles.usuarioCard}>
+                <View style={styles.cardHeader}>
+                    <View style={styles.cardHeaderLeft}>
+                        <Ionicons name="person-circle" size={32} color="#FFD700" />
+                        <View>
+                            <Text style={styles.usuarioNome}>{item.nome}</Text>
+                            <Text style={styles.usuarioPatente}>{item.patente}</Text>
+                        </View>
+                    </View>
+                    <View style={[styles.perfilBadge, { backgroundColor: getPerfilColor(item.perfil) }]}>
+                        <Text style={styles.perfilBadgeText}>{item.perfil}</Text>
                     </View>
                 </View>
-                <View style={[styles.perfilBadge, { backgroundColor: getPerfilColor(item.perfil) }]}>
-                    <Text style={styles.perfilBadgeText}>{item.perfil}</Text>
+                
+                <View style={styles.cardInfo}>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Identificador:</Text>
+                        <Text style={styles.infoValue}>{item.identificador}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Email:</Text>
+                        <Text style={styles.infoValue}>{item.email || 'Não informado'}</Text>
+                    </View>
+                </View>
+                
+                <View style={styles.cardActions}>
+                    {item.perfil !== 'ADMINISTRADOR' && (
+                        <TouchableOpacity style={styles.promoteButton} onPress={() => abrirModalPromocao(item)}>
+                            <Ionicons name="arrow-up-circle" size={18} color="#fff" />
+                            <Text style={styles.actionText}>Promover</Text>
+                        </TouchableOpacity>
+                    )}
+                    
+                    {podeExcluir && (
+                        <TouchableOpacity style={styles.deleteButton} onPress={() => handleExcluirUsuario(item)}>
+                            <Ionicons name="trash" size={18} color="#fff" />
+                            <Text style={styles.actionText}>Excluir</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
-            
-            <View style={styles.cardInfo}>
-                <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Identificador:</Text>
-                    <Text style={styles.infoValue}>{item.identificador}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Email:</Text>
-                    <Text style={styles.infoValue}>{item.email || 'Não informado'}</Text>
-                </View>
-            </View>
-            
-            <View style={styles.cardActions}>
-                {item.perfil !== 'ADMINISTRADOR' && (
-                    <TouchableOpacity style={styles.promoteButton} onPress={() => abrirModalPromocao(item)}>
-                        <Ionicons name="arrow-up-circle" size={18} color="#fff" />
-                        <Text style={styles.actionText}>Promover</Text>
-                    </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.deleteButton} onPress={() => handleExcluirUsuario(item)}>
-                    <Ionicons name="trash" size={18} color="#fff" />
-                    <Text style={styles.actionText}>Excluir</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
+        );
+    };
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
