@@ -16,7 +16,7 @@ import GerenciarUsuarios from './componentes/Usuario/GerenciarUsuarios';
 import AtualizarDados from './componentes/Usuario/AtualizarDados';
 import Atividades from './componentes/Usuario/Atividades';
 import AtribuirEquipamento from './componentes/Equipamentos/AtribuirEquipamento';
-import { IdleProvider } from './componentes/Usuario/utils/IdleProvider';
+import { IdleProvider, IDLE_TIMEOUT_MS } from './componentes/Usuario/utils/IdleProvider';
 
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
@@ -29,7 +29,24 @@ export default function App() {
         const checkLoginStatus = async () => {
             try {
                 const usuarioNome = await AsyncStorage.getItem("usuarioNome");
-                setIsLoggedIn(!!usuarioNome);
+                const lastActivityStr = await AsyncStorage.getItem('@last_activity');
+                
+                if (usuarioNome && lastActivityStr) {
+                    const elapsed = Date.now() - parseInt(lastActivityStr);
+                    
+                    // Se o tempo de inatividade passou do limite enquanto o app estava fechado
+                    if (elapsed >= IDLE_TIMEOUT_MS) {
+                        await AsyncStorage.multiRemove([
+                            'usuarioNome', 'usuarioId', 'usuarioIdentificador',
+                            'usuarioPerfil', 'usuarioPatente', 'usuarioCompleto', '@last_activity'
+                        ]);
+                        setIsLoggedIn(false);
+                    } else {
+                        setIsLoggedIn(true);
+                    }
+                } else {
+                    setIsLoggedIn(!!usuarioNome);
+                }
             } catch (error) {
                 console.error('Erro ao verificar login:', error);
                 setIsLoggedIn(false);
