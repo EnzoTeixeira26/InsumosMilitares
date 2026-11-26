@@ -7,23 +7,30 @@ import { registrarAtividade, TIPO_ATIVIDADE } from '../Services/AtividadeService
 import { API } from "../../config/api";
 
 const PATENTES_EXERCITO = [
-    "General de Exército",
-    "General de Divisão",
-    "General de Brigada",
-    "Coronel",
-    "Tenente-Coronel",
-    "Major",
-    "Capitão",
-    "1º Tenente",
-    "2º Tenente",
-    "Aspirante a Oficial",
-    "Subtenente",
-    "1º Sargento",
-    "2º Sargento",
-    "3º Sargento",
-    "Cabo",
-    "Soldado"
+    "General de Exército", "General de Divisão", "General de Brigada", "Coronel",
+    "Tenente-Coronel", "Major", "Capitão", "1º Tenente", "2º Tenente",
+    "Aspirante a Oficial", "Subtenente", "1º Sargento", "2º Sargento",
+    "3º Sargento", "Cabo", "Soldado"
 ];
+
+const FUNCOES_POR_PATENTE = {
+    "General de Exército": ["Comandante do Exército", "Chefe do Estado-Maior"],
+    "General de Divisão": ["Comandante de Divisão", "Diretor de Logística"],
+    "General de Brigada": ["Comandante de Brigada", "Chefe de Gabinete"],
+    "Coronel": ["Comandante de Regimento", "Chefe de Estado-Maior", "Oficial de Operações"],
+    "Tenente-Coronel": ["Comandante de Batalhão", "Subcomandante", "Oficial de Inteligência"],
+    "Major": ["Chefe de Seção", "Oficial de Comunicações", "Adjunto de Comando"],
+    "Capitão": ["Comandante de Companhia", "Instrutor", "Oficial de Material"],
+    "1º Tenente": ["Comandante de Pelotão", "Instrutor de Tiro", "Oficial de Comunicações"],
+    "2º Tenente": ["Comandante de Pelotão", "Auxiliar de Estado-Maior"],
+    "Aspirante a Oficial": ["Instrutor Auxiliar", "Oficial de Dia", "Adjunto de Pelotão"],
+    "Subtenente": ["Adjunto de Comando", "Chefe de Seção", "Instrutor"],
+    "1º Sargento": ["Chefe de Peça", "Instrutor de Tiro", "Monitor", "Adjunto de Pelotão"],
+    "2º Sargento": ["Instrutor de Tiro", "Monitor", "Chefe de Equipe"],
+    "3º Sargento": ["Instrutor de Tiro", "Monitor", "Comandante de Esquadra"],
+    "Cabo": ["Atirador", "Motorista", "Auxiliar de Peça", "Sentinela"],
+    "Soldado": ["Atirador", "Motorista", "Auxiliar de Cozinha", "Sentinela", "Auxiliar de Saúde"]
+};
 
 export default function GestaoPelotao({ navigation }) {
     const [soldados, setSoldados] = useState([]);
@@ -37,6 +44,7 @@ export default function GestaoPelotao({ navigation }) {
     const [mensagemTitulo, setMensagemTitulo] = useState('');
     const [mensagemTexto, setMensagemTexto] = useState('');
     const [patenteModalVisible, setPatenteModalVisible] = useState(false);
+    const [funcaoModalVisible, setFuncaoModalVisible] = useState(false);
     
     const [nome, setNome] = useState('');
     const [identificador, setIdentificador] = useState('');
@@ -71,7 +79,7 @@ export default function GestaoPelotao({ navigation }) {
         } catch (error) {
             console.error('Erro ao carregar soldados:', error);
             const mockSoldados = [
-                { id: 1, nome: "João Silva", identificador: "202500000000001", patente: "Capitão", pelotao: "SELVA", funcao: "Comandante", dataIngresso: "2020-01-15", status: "ATIVO" },
+                { id: 1, nome: "João Silva", identificador: "202500000000001", patente: "Capitão", pelotao: "SELVA", funcao: "Comandante de Companhia", dataIngresso: "2020-01-15", status: "ATIVO" },
                 { id: 2, nome: "Carlos Souza", identificador: "202500000000002", patente: "Tenente", pelotao: "TANQUE", funcao: "Oficial de Operações", dataIngresso: "2021-03-10", status: "ATIVO" },
                 { id: 3, nome: "Roberto Lima", identificador: "202500000000003", patente: "Sargento", pelotao: "JEEP", funcao: "Instrutor", dataIngresso: "2019-07-22", status: "LICENCA" },
             ];
@@ -257,6 +265,8 @@ export default function GestaoPelotao({ navigation }) {
         { id: 'PARAQUEDISTA', nome: 'Pelotão Paraquedista', icone: 'airplane' },
     ];
 
+    const funcoesDisponiveis = patente ? (FUNCOES_POR_PATENTE[patente] || []) : [];
+
     return (
         <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
             <View style={styles.header}>
@@ -334,6 +344,7 @@ export default function GestaoPelotao({ navigation }) {
                 )}
             </View>
 
+            {/* Modal de Cadastro/Edição */}
             <Modal
                 transparent={true}
                 visible={modalVisible}
@@ -383,6 +394,25 @@ export default function GestaoPelotao({ navigation }) {
                         </View>
 
                         <View style={styles.inputContainer}>
+                            <Text style={styles.inputLabel}>Função</Text>
+                            <TouchableOpacity 
+                                style={[styles.modalInput, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', opacity: patente ? 1 : 0.6 }]} 
+                                onPress={() => {
+                                    if (!patente) {
+                                        mostrarMensagem('Atenção', 'Selecione uma patente primeiro.');
+                                        return;
+                                    }
+                                    setFuncaoModalVisible(true);
+                                }}
+                            >
+                                <Text style={{ color: funcao ? '#fff' : '#888', fontSize: 14 }}>
+                                    {funcao ? funcao : (patente ? "Selecione a função" : "Selecione a patente primeiro")}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color="#FFD700" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.inputContainer}>
                             <Text style={styles.inputLabel}>Pelotão *</Text>
                             <View style={styles.pelotaoContainer}>
                                 {pelotoes.map((p) => (
@@ -398,17 +428,6 @@ export default function GestaoPelotao({ navigation }) {
                                     </TouchableOpacity>
                                 ))}
                             </View>
-                        </View>
-
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Função</Text>
-                            <TextInput
-                                style={styles.modalInput}
-                                value={funcao}
-                                onChangeText={setFuncao}
-                                placeholder="Ex: Comandante, Instrutor, Atirador"
-                                placeholderTextColor="#888"
-                            />
                         </View>
 
                         <View style={styles.inputContainer}>
@@ -461,6 +480,7 @@ export default function GestaoPelotao({ navigation }) {
                 </View>
             </Modal>
 
+            {/* Modal de Patente */}
             <Modal
                 transparent={true}
                 visible={patenteModalVisible}
@@ -483,6 +503,7 @@ export default function GestaoPelotao({ navigation }) {
                                     style={styles.patenteItem}
                                     onPress={() => {
                                         setPatente(item);
+                                        setFuncao(''); // Limpa a função ao trocar de patente
                                         setPatenteModalVisible(false);
                                     }}
                                 >
@@ -497,6 +518,45 @@ export default function GestaoPelotao({ navigation }) {
                 </View>
             </Modal>
 
+            {/* Modal de Função */}
+            <Modal
+                transparent={true}
+                visible={funcaoModalVisible}
+                animationType="slide"
+                onRequestClose={() => setFuncaoModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.patenteModalContainer}>
+                        <View style={styles.patenteModalHeader}>
+                            <Text style={styles.modalTitle}>Selecione a Função</Text>
+                            <TouchableOpacity onPress={() => setFuncaoModalVisible(false)}>
+                                <Ionicons name="close" size={24} color="#FFD700" />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={funcoesDisponiveis}
+                            keyExtractor={(item) => item}
+                            ListEmptyComponent={<Text style={{color: '#fff', textAlign: 'center', marginTop: 20}}>Nenhuma função disponível para esta patente.</Text>}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.patenteItem}
+                                    onPress={() => {
+                                        setFuncao(item);
+                                        setFuncaoModalVisible(false);
+                                    }}
+                                >
+                                    <Text style={[styles.patenteItemText, funcao === item && { color: '#FFD700', fontWeight: 'bold' }]}>
+                                        {item}
+                                    </Text>
+                                    {funcao === item && <Ionicons name="checkmark" size={20} color="#FFD700" />}
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modal de Exclusão */}
             <Modal
                 transparent={true}
                 visible={deleteModalVisible}
@@ -522,6 +582,7 @@ export default function GestaoPelotao({ navigation }) {
                 </View>
             </Modal>
 
+            {/* Modal de Mensagem */}
             <Modal
                 transparent={true}
                 visible={mensagemModalVisible}

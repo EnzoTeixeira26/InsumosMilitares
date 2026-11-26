@@ -6,6 +6,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { registrarAtividade, TIPO_ATIVIDADE } from '../Services/AtividadeService';
 import { API } from "../../config/api";
 
+const LOCALIZACOES_INSUMOS = [
+    "Arsenal Central",
+    "Paiol de Munição",
+    "Depósito de Combustível",
+    "Cozinha Central",
+    "Enfermaria",
+    "Almoxarifado",
+    "Garagem",
+    "Depósito de Alimentos"
+];
+
 export default function ControleInsumos({ navigation }) {
     const [insumos, setInsumos] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -19,6 +30,7 @@ export default function ControleInsumos({ navigation }) {
     const [mensagemModalVisible, setMensagemModalVisible] = useState(false);
     const [mensagemTitulo, setMensagemTitulo] = useState('');
     const [mensagemTexto, setMensagemTexto] = useState('');
+    const [localizacaoModalVisible, setLocalizacaoModalVisible] = useState(false);
 
     const [nome, setNome] = useState('');
     const [categoria, setCategoria] = useState('MUNICAO');
@@ -57,9 +69,9 @@ export default function ControleInsumos({ navigation }) {
         } catch (error) {
             console.error('Erro ao carregar insumos:', error);
             const mockInsumos = [
-                { id: 1, nome: "Munição 5.56mm", categoria: "MUNICAO", quantidade: 5000, quantidadeMinima: 1000, unidade: "UN", localizacao: "Arsenal 1", status: "OK" },
-                { id: 2, nome: "Combustível Diesel", categoria: "COMBUSTIVEL", quantidade: 800, quantidadeMinima: 500, unidade: "L", localizacao: "Depósito A", status: "OK" },
-                { id: 3, nome: "Ração Operacional", categoria: "ALIMENTACAO", quantidade: 150, quantidadeMinima: 200, unidade: "KG", localizacao: "Cozinha", status: "BAIXO" },
+                { id: 1, nome: "Munição 5.56mm", categoria: "MUNICAO", quantidade: 5000, quantidadeMinima: 1000, unidade: "UN", localizacao: "Arsenal Central", status: "OK" },
+                { id: 2, nome: "Combustível Diesel", categoria: "COMBUSTIVEL", quantidade: 800, quantidadeMinima: 500, unidade: "L", localizacao: "Depósito de Combustível", status: "OK" },
+                { id: 3, nome: "Ração Operacional", categoria: "ALIMENTACAO", quantidade: 150, quantidadeMinima: 200, unidade: "KG", localizacao: "Cozinha Central", status: "BAIXO" },
             ];
             setInsumos(mockInsumos);
         } finally {
@@ -89,7 +101,7 @@ export default function ControleInsumos({ navigation }) {
         setQuantidade(item.quantidade.toString());
         setQuantidadeMinima(item.quantidadeMinima.toString());
         setUnidade(item.unidade);
-        setLocalizacao(item.localizacao);
+        setLocalizacao(item.localizacao || '');
         setModalVisible(true);
     };
 
@@ -450,13 +462,15 @@ export default function ControleInsumos({ navigation }) {
 
                         <View style={styles.inputContainer}>
                             <Text style={styles.inputLabel}>Localização</Text>
-                            <TextInput
-                                style={styles.modalInput}
-                                value={localizacao}
-                                onChangeText={setLocalizacao}
-                                placeholder="Ex: Arsenal 1, Depósito A"
-                                placeholderTextColor="#888"
-                            />
+                            <TouchableOpacity 
+                                style={[styles.modalInput, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]} 
+                                onPress={() => setLocalizacaoModalVisible(true)}
+                            >
+                                <Text style={{ color: localizacao ? '#fff' : '#888', fontSize: 14 }}>
+                                    {localizacao ? localizacao : "Selecione a localização"}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color="#FFD700" />
+                            </TouchableOpacity>
                         </View>
 
                         <View style={styles.modalButtons}>
@@ -471,6 +485,43 @@ export default function ControleInsumos({ navigation }) {
                             </TouchableOpacity>
                         </View>
                     </ScrollView>
+                </View>
+            </Modal>
+
+            {/* Modal de Localização */}
+            <Modal
+                transparent={true}
+                visible={localizacaoModalVisible}
+                animationType="slide"
+                onRequestClose={() => setLocalizacaoModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.pickerModalContainer}>
+                        <View style={styles.pickerModalHeader}>
+                            <Text style={styles.modalTitle}>Selecione a Localização</Text>
+                            <TouchableOpacity onPress={() => setLocalizacaoModalVisible(false)}>
+                                <Ionicons name="close" size={24} color="#FFD700" />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={LOCALIZACOES_INSUMOS}
+                            keyExtractor={(item) => item}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.pickerItem}
+                                    onPress={() => {
+                                        setLocalizacao(item);
+                                        setLocalizacaoModalVisible(false);
+                                    }}
+                                >
+                                    <Text style={[styles.pickerItemText, localizacao === item && { color: '#FFD700', fontWeight: 'bold' }]}>
+                                        {item}
+                                    </Text>
+                                    {localizacao === item && <Ionicons name="checkmark" size={20} color="#FFD700" />}
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </View>
                 </View>
             </Modal>
 
@@ -547,6 +598,7 @@ export default function ControleInsumos({ navigation }) {
                 </View>
             </Modal>
 
+            {/* Modal de Exclusão */}
             <Modal
                 transparent={true}
                 visible={deleteModalVisible}
@@ -572,7 +624,7 @@ export default function ControleInsumos({ navigation }) {
                 </View>
             </Modal>
 
-            {/* Modal de Mensagem (substituto do Alert) */}
+            {/* Modal de Mensagem */}
             <Modal
                 transparent={true}
                 visible={mensagemModalVisible}
@@ -1079,7 +1131,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
     },
-    // Modal de Mensagem
     modalMensagemOverlay: {
         flex: 1,
         justifyContent: 'center',
@@ -1118,5 +1169,38 @@ const styles = StyleSheet.create({
         color: '#0a2a0a',
         fontWeight: 'bold',
         fontSize: 14,
+    },
+    pickerModalContainer: {
+        backgroundColor: '#2a4a2a',
+        width: '90%',
+        maxHeight: '80%',
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: '#FFD700',
+        padding: 20,
+        alignSelf: 'center',
+        marginTop: 'auto',
+        marginBottom: 'auto',
+    },
+    pickerModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#FFD700',
+        paddingBottom: 10,
+    },
+    pickerItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: '#3a5a3a',
+    },
+    pickerItemText: {
+        fontSize: 16,
+        color: '#fff',
     },
 });
