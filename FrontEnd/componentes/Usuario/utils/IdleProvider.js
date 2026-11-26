@@ -3,7 +3,7 @@ import { useRef, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registrarAtividade, TIPO_ATIVIDADE } from '../../Services/AtividadeService';
 
-export const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+export const IDLE_TIMEOUT_MS = 0.1 * 60 * 1000;
 
 export function IdleProvider({ children, navigationRef, timeout = IDLE_TIMEOUT_MS }) {
     const timerRef    = useRef(null);
