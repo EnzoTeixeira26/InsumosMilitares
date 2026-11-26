@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Ionicons } from '@expo/vector-icons';
 import { API } from "../../config/api";
+import { registrarAtividade, TIPO_ATIVIDADE } from '../Services/AtividadeService';
 
 export default function GerenciarUsuarios({ navigation }) {
     const [usuarios, setUsuarios] = useState([]);
@@ -61,6 +62,11 @@ export default function GerenciarUsuarios({ navigation }) {
             await axios.put(`${API.usuario}/${usuarioSelecionado.id}/perfil`, {
                 perfil: novoPerfil
             });
+            await registrarAtividade(
+                'Alterar Perfil',
+                `Alterou o perfil de ${usuarioSelecionado.nome} para ${novoPerfil}`,
+                TIPO_ATIVIDADE.EDICAO
+            );
             
             Alert.alert(
                 'Sucesso', 
@@ -91,6 +97,11 @@ export default function GerenciarUsuarios({ navigation }) {
             setUsuarioParaExcluir(null);
             Alert.alert('Sucesso', 'Usuário excluído com sucesso!');
             carregarUsuarios();
+            await registrarAtividade(
+                'Excluir Usuário',
+                `Excluiu o usuário ${usuarioParaExcluir.nome} (${usuarioParaExcluir.identificador})`,
+                TIPO_ATIVIDADE.EXCLUSAO
+            );
         } catch (error) {
             console.error('Erro ao excluir:', error);
             Alert.alert('Erro', 'Não foi possível excluir o usuário');

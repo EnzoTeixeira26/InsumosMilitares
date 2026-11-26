@@ -74,4 +74,9 @@ public class AtividadeService {
         logger.info("Method countByUsuarioId started - Usuario id: " + usuarioId);
         return repository.countByUsuarioId(usuarioId);
     }
+
+    public List<Atividades> findTop10ByUsuarioId(Long usuarioId) {
+    logger.info("Method findTop10ByUsuarioId started - Usuario id: " + usuarioId);
+    return repository.findTop10ByUsuarioIdOrderByDataDesc(usuarioId);
+    }
 }

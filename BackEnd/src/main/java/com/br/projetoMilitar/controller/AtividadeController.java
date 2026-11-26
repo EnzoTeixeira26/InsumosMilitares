@@ -66,6 +66,11 @@ public class AtividadeController {
         return ResponseEntity.ok(service.countByUsuarioId(usuarioId));
     }
 
+    @GetMapping("/usuario/{usuarioId}/recentes")
+    public ResponseEntity<List<Atividades>> findTop10ByUsuarioId(@PathVariable Long usuarioId) {
+    return ResponseEntity.ok(service.findTop10ByUsuarioId(usuarioId));
+    }
+
     @PostMapping
     public ResponseEntity<Atividades> create(@RequestBody Atividades atividade) {
         return new ResponseEntity<>(service.create(atividade), HttpStatus.CREATED);

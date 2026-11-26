@@ -104,6 +104,11 @@ export default function Login({ navigation }) {
                 });
             } else if (error.response && error.response.status === 401) {
                 setMensagem('Identificador ou senha incorretos.');
+                await registrarAtividade(
+                    'Tentativa de Login',
+                    `Tentativa de login com identificador ${identificador} falhou`,
+                    TIPO_ATIVIDADE.LOGIN
+                );
             } else {
                 console.error('Erro no login:', error);
                 setMensagem('Erro ao conectar com o servidor.');

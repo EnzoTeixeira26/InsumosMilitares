@@ -4,17 +4,22 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Ionicons } from '@expo/vector-icons';
 import { API } from "../../config/api";
+import PasswordStrengthBar from '../components/PasswordStrengthBar';
+import { validarSenhaForte } from '../utils/ValidacaoSenha';
+import { registrarAtividade, TIPO_ATIVIDADE } from '../Services/AtividadeService';
 
 export default function AtualizarDados({ navigation, route }) {
     const { user, trocaObrigatoria } = route.params || {};
-    
-    const [nome, setNome] = useState(user?.nome || '');
-    const [email, setEmail] = useState(user?.email || '');
-    const [telefone, setTelefone] = useState(user?.telefone || '');
-    
-    const [novaSenha, setNovaSenha] = useState('');
+
+    const [nome, setNome]               = useState(user?.nome     || '');
+    const [email, setEmail]             = useState(user?.email    || '');
+    const [telefone, setTelefone]       = useState(user?.telefone || '');
+
+    const [novaSenha, setNovaSenha]           = useState('');
     const [confirmarSenha, setConfirmarSenha] = useState('');
-    
+    const [mostrarNova, setMostrarNova]           = useState(false);
+    const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
+
     const [loading, setLoading] = useState(false);
 
     const handleSalvar = async () => {
@@ -23,62 +28,80 @@ export default function AtualizarDados({ navigation, route }) {
             return;
         }
 
-        if (trocaObrigatoria) {
+        const querTrocarSenha =
+            trocaObrigatoria ||
+            novaSenha.length > 0 ||
+            confirmarSenha.length > 0;
+
+        if (querTrocarSenha) {
             if (!novaSenha || !confirmarSenha) {
-                Alert.alert('Atenção', 'Você precisa definir uma nova senha.');
+                Alert.alert('Atenção', 'Preencha a nova senha e a confirmação.');
                 return;
             }
             if (novaSenha !== confirmarSenha) {
                 Alert.alert('Atenção', 'As senhas não coincidem.');
                 return;
             }
-            if (novaSenha.length < 6) {
-                Alert.alert('Atenção', 'A nova senha deve ter pelo menos 6 caracteres.');
+
+            const { valida, erros } = validarSenhaForte(novaSenha);
+
+            if (!valida) {
+                Alert.alert('Senha Fraca', 'A senha precisa ter:\n• ' + erros.join('\n• '));
                 return;
             }
         }
 
         setLoading(true);
-        
+
         try {
             const dadosAtualizados = {
                 ...user,
-                nome: nome,
-                email: email,
-                telefone: telefone
+                nome,
+                email,
+                telefone,
             };
 
             await axios.put(`${API.usuario}/${user.id}`, dadosAtualizados);
 
-            if (trocaObrigatoria) {
+            if (querTrocarSenha) {
                 await axios.put(`${API.usuario}/${user.id}/trocar-senha`, {
-                    novaSenha: novaSenha
+                    novaSenha,
                 });
             }
 
-            await AsyncStorage.setItem('usuarioCompleto', JSON.stringify({ ...dadosAtualizados, primeiroAcesso: false }));
-            await AsyncStorage.setItem('usuarioNome', nome.split(' ')[0]);
+            await AsyncStorage.setItem('usuarioCompleto', JSON.stringify({
+                ...dadosAtualizados,
+                primeiroAcesso: false,
+            }));
+            await AsyncStorage.setItem('usuarioNome',  nome.split(' ')[0]);
             await AsyncStorage.setItem('usuarioEmail', email);
             await AsyncStorage.setItem('usuarioTelefone', telefone);
 
+            await registrarAtividade(
+                querTrocarSenha ? 'Alterar Senha' : 'Editar Perfil',
+                querTrocarSenha
+                    ? `Usuário ${nome} alterou a senha${trocaObrigatoria ? ' (primeiro acesso)' : ''}`
+                    : `Usuário ${nome} atualizou o próprio perfil`,
+                TIPO_ATIVIDADE.EDICAO
+            );
+
             if (trocaObrigatoria) {
                 Alert.alert(
-                    'Sucesso', 
-                    'Senha alterada com sucesso! Por favor, faça login novamente.', 
-                    [
-                        { 
-                            text: 'OK', 
-                            onPress: async () => {
-                                await AsyncStorage.clear(); 
-                                navigation.replace('Login');
-                            }
-                        }
-                    ]
+                    'Sucesso',
+                    'Senha alterada com sucesso! Por favor, faça login novamente.',
+                    [{
+                        text: 'OK',
+                        onPress: async () => {
+                            await AsyncStorage.clear();
+                            navigation.replace('Login');
+                        },
+                    }]
                 );
             } else {
+                Alert.alert('Sucesso', 'Dados atualizados com sucesso!');
                 navigation.goBack();
             }
-            
+
         } catch (error) {
             console.error('Erro ao atualizar:', error);
             Alert.alert('Erro', 'Não foi possível atualizar os dados. Tente novamente.');
@@ -90,16 +113,19 @@ export default function AtualizarDados({ navigation, route }) {
     return (
         <ScrollView style={styles.container}>
             <View style={styles.header}>
-               
                 {!trocaObrigatoria && (
                     <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                         <Ionicons name="arrow-back" size={24} color="#FFD700" />
                         <Text style={styles.backButtonText}>Voltar</Text>
                     </TouchableOpacity>
                 )}
-                
+
                 <View style={styles.headerTop}>
-                    <Ionicons name={trocaObrigatoria ? "lock-open" : "create"} size={32} color="#FFD700" />
+                    <Ionicons
+                        name={trocaObrigatoria ? "lock-open" : "create"}
+                        size={32}
+                        color="#FFD700"
+                    />
                     <Text style={styles.headerTitle}>
                         {trocaObrigatoria ? 'Primeiro Acesso' : 'Editar Perfil'}
                     </Text>
@@ -107,13 +133,12 @@ export default function AtualizarDados({ navigation, route }) {
             </View>
 
             <View style={styles.formContainer}>
-                
-                {/* Aviso de Primeiro Acesso */}
                 {trocaObrigatoria && (
                     <View style={styles.avisoContainer}>
                         <Ionicons name="warning" size={24} color="#D32F2F" />
                         <Text style={styles.avisoText}>
-                            Bem-vindo ao sistema! Como este é seu primeiro acesso ou sua senha expirou, você precisa criar uma nova senha definitiva para continuar.
+                            Bem-vindo ao sistema! Como este é seu primeiro acesso ou sua senha expirou,
+                            você precisa criar uma nova senha definitiva para continuar.
                         </Text>
                     </View>
                 )}
@@ -126,7 +151,7 @@ export default function AtualizarDados({ navigation, route }) {
                         onChangeText={setNome}
                         placeholder="Digite seu nome"
                         placeholderTextColor="#888"
-                        editable={!trocaObrigatoria} 
+                        editable={!trocaObrigatoria}
                     />
                 </View>
 
@@ -139,7 +164,7 @@ export default function AtualizarDados({ navigation, route }) {
                         placeholder="Digite seu email"
                         keyboardType="email-address"
                         placeholderTextColor="#888"
-                        editable={!trocaObrigatoria} 
+                        editable={!trocaObrigatoria}
                     />
                 </View>
 
@@ -155,51 +180,87 @@ export default function AtualizarDados({ navigation, route }) {
                     />
                 </View>
 
-                
-                {trocaObrigatoria && (
-                    <>
-                        <View style={styles.divider}>
-                            <Text style={styles.dividerText}>SEGURANÇA</Text>
-                        </View>
+                <View style={styles.divider}>
+                    <Text style={styles.dividerText}>
+                        {trocaObrigatoria ? 'SEGURANÇA' : 'ALTERAR SENHA (OPCIONAL)'}
+                    </Text>
+                </View>
 
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Nova Senha *</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={novaSenha}
-                                onChangeText={setNovaSenha}
-                                placeholder="Mínimo 6 caracteres"
-                                secureTextEntry
-                                placeholderTextColor="#888"
-                            />
-                        </View>
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>
+                        Nova Senha {trocaObrigatoria ? '*' : ''}
+                    </Text>
 
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.inputLabel}>Confirmar Nova Senha *</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={confirmarSenha}
-                                onChangeText={setConfirmarSenha}
-                                placeholder="Confirme a nova senha"
-                                secureTextEntry
-                                placeholderTextColor="#888"
+                    <View style={styles.senhaWrapper}>
+                        <TextInput
+                            style={styles.senhaInput}
+                            value={novaSenha}
+                            onChangeText={setNovaSenha}
+                            placeholder="Mín. 8 caracteres com maiúscula, número e símbolo"
+                            secureTextEntry={!mostrarNova}
+                            placeholderTextColor="#888"
+                        />
+                        <TouchableOpacity
+                            onPress={() => setMostrarNova(v => !v)}
+                            style={styles.eyeButton}
+                        >
+                            <Ionicons
+                                name={mostrarNova ? 'eye-off' : 'eye'}
+                                size={22}
+                                color="#FFD700"
                             />
-                            {novaSenha && confirmarSenha && novaSenha !== confirmarSenha && (
-                                <Text style={styles.errorText}>As senhas não coincidem</Text>
-                            )}
-                        </View>
-                    </>
-                )}
+                        </TouchableOpacity>
+                    </View>
+
+                    <PasswordStrengthBar senha={novaSenha} />
+                </View>
+
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>
+                        Confirmar Nova Senha {trocaObrigatoria ? '*' : ''}
+                    </Text>
+
+                    <View style={styles.senhaWrapper}>
+                        <TextInput
+                            style={styles.senhaInput}
+                            value={confirmarSenha}
+                            onChangeText={setConfirmarSenha}
+                            placeholder="Confirme a nova senha"
+                            secureTextEntry={!mostrarConfirmar}
+                            placeholderTextColor="#888"
+                        />
+                        <TouchableOpacity
+                            onPress={() => setMostrarConfirmar(v => !v)}
+                            style={styles.eyeButton}
+                        >
+                            <Ionicons
+                                name={mostrarConfirmar ? 'eye-off' : 'eye'}
+                                size={22}
+                                color="#FFD700"
+                            />
+                        </TouchableOpacity>
+                    </View>
+
+                    {novaSenha && confirmarSenha && novaSenha !== confirmarSenha && (
+                        <Text style={styles.errorText}>As senhas não coincidem</Text>
+                    )}
+                </View>
 
                 <View style={styles.buttonContainer}>
-                    <TouchableOpacity 
-                        style={[styles.saveButton, loading && styles.buttonDisabled]} 
+                    <TouchableOpacity
+                        style={[styles.saveButton, loading && styles.buttonDisabled]}
                         onPress={handleSalvar}
                         disabled={loading}
                     >
-                        <Ionicons name={trocaObrigatoria ? "checkmark-circle" : "save"} size={20} color="#0a2a0a" />
+                        <Ionicons
+                            name={trocaObrigatoria ? "checkmark-circle" : "save"}
+                            size={20}
+                            color="#0a2a0a"
+                        />
                         <Text style={styles.saveButtonText}>
-                            {loading ? 'SALVANDO...' : (trocaObrigatoria ? 'DEFINIR SENHA E ENTRAR' : 'SALVAR')}
+                            {loading
+                                ? 'SALVANDO...'
+                                : (trocaObrigatoria ? 'DEFINIR SENHA E ENTRAR' : 'SALVAR')}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -281,6 +342,24 @@ const styles = StyleSheet.create({
         padding: 14,
         fontSize: 15,
         color: '#fff',
+    },
+    senhaWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#2a4a2a',
+        borderWidth: 1,
+        borderColor: '#FFD700',
+        borderRadius: 12,
+        paddingHorizontal: 14,
+    },
+    senhaInput: {
+        flex: 1,
+        paddingVertical: 14,
+        fontSize: 15,
+        color: '#fff',
+    },
+    eyeButton: {
+        padding: 6,
     },
     errorText: {
         fontSize: 11,

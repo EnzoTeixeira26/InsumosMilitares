@@ -1,70 +1,87 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 import { Ionicons } from '@expo/vector-icons';
 import { VERSAO_ATUAL } from "../../config/api";
+import { buscarAtividadesRecentesUsuario, registrarAtividade, TIPO_ATIVIDADE } from '../Services/AtividadeService';
 
 export default function PerfilUsuario({ navigation }) {
-    const [user, setUser] = useState({});
-    const [loading, setLoading] = useState(false);
-    const [atividadeRecente, setAtividadeRecente] = useState([]);
-
-    useEffect(() => {
-        carregarDadosUsuario();
-        carregarAtividadeRecente();
-    }, []);
+    const [user, setUser]                           = useState({});
+    const [atividadeRecente, setAtividadeRecente]   = useState([]);
+    const [carregandoAtividades, setCarregandoAtividades] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
             carregarDadosUsuario();
             carregarAtividadeRecente();
-            return () => {};
         }, [])
     );
 
     const carregarDadosUsuario = async () => {
-        try {
-            const usuarioCompleto = await AsyncStorage.getItem('usuarioCompleto');
-            if (usuarioCompleto) {
-                setUser(JSON.parse(usuarioCompleto));
-            }
-        } catch (error) {
-            console.error('Erro ao carregar dados do usuário:', error);
+        const usuarioCompleto = await AsyncStorage.getItem('usuarioCompleto');
+        if (usuarioCompleto) {
+            setUser(JSON.parse(usuarioCompleto));
         }
     };
 
     const carregarAtividadeRecente = async () => {
+        setCarregandoAtividades(true);
+
         try {
-            const atividades = [
-                { id: 1, descricao: "Login realizado", data: new Date().toLocaleString(), tipo: "login" },
-                { id: 2, descricao: "Consulta de equipamentos", data: new Date().toLocaleString(), tipo: "consulta" },
-            ];
-            setAtividadeRecente(atividades);
+            const idStr = await AsyncStorage.getItem('usuarioId');
+            if (!idStr) return;
+
+            const atividades = await buscarAtividadesRecentesUsuario(parseInt(idStr));
+            setAtividadeRecente(atividades || []);
         } catch (error) {
             console.error('Erro ao carregar atividades:', error);
+            setAtividadeRecente([]);
+        } finally {
+            setCarregandoAtividades(false);
         }
     };
 
     const handleLogout = async () => {
-        await AsyncStorage.multiRemove([
-            "usuarioNome", "usuarioId", "usuarioIdentificador",
-            "usuarioPerfil", "usuarioPatente", "usuarioCompleto"
-        ]);
-        navigation.replace("Login");
-    }
+        await registrarAtividade(
+            'Logout',
+            `Usuário ${user.nome || ''} saiu do sistema`,
+            TIPO_ATIVIDADE.LOGIN
+        );
 
-    const getPerfilColor = (perfil) => {
-        return perfil === 'ADMINISTRADOR' ? '#D32F2F' : '#2E7D32';
+        await AsyncStorage.multiRemove([
+            "usuarioNome",
+            "usuarioId",
+            "usuarioIdentificador",
+            "usuarioPerfil",
+            "usuarioPatente",
+            "usuarioCompleto",
+        ]);
+
+        navigation.replace("Login");
     };
+
+    const getPerfilColor = (perfil) =>
+        perfil === 'ADMINISTRADOR' ? '#D32F2F' : '#2E7D32';
 
     const getAtividadeIcon = (tipo) => {
         switch (tipo) {
-            case 'login': return 'log-in';
-            case 'consulta': return 'search';
-            case 'cadastro': return 'person-add';
-            default: return 'time';
+            case 'login':         return 'log-in';
+            case 'consulta':      return 'search';
+            case 'cadastro':      return 'person-add';
+            case 'edicao':        return 'create';
+            case 'exclusao':      return 'trash';
+            case 'movimentacao':  return 'swap-horizontal';
+            default:              return 'time';
+        }
+    };
+
+    const formatarData = (data) => {
+        if (!data) return '';
+        try {
+            return new Date(data).toLocaleString('pt-BR');
+        } catch {
+            return data;
         }
     };
 
@@ -75,13 +92,17 @@ export default function PerfilUsuario({ navigation }) {
                     <Ionicons name="arrow-back" size={24} color="#FFD700" />
                     <Text style={styles.backButtonText}>Voltar</Text>
                 </TouchableOpacity>
+
                 <View style={styles.headerTop}>
                     <Ionicons name="person-circle" size={50} color="#FFD700" />
                 </View>
+
                 <Text style={styles.userName}>{user.nome || 'Carregando...'}</Text>
+
                 <View style={[styles.perfilBadge, { backgroundColor: getPerfilColor(user.perfil) }]}>
                     <Text style={styles.perfilBadgeText}>{user.perfil || 'OPERADOR'}</Text>
                 </View>
+
                 <Text style={styles.userIdentificador}>ID: {user.identificador || '---'}</Text>
             </View>
 
@@ -91,6 +112,7 @@ export default function PerfilUsuario({ navigation }) {
                         <Ionicons name="person" size={20} color="#FFD700" />
                         <Text style={styles.sectionTitle}>Informações Pessoais</Text>
                     </View>
+
                     <View style={styles.infoCard}>
                         <View style={styles.infoRow}>
                             <Text style={styles.infoLabel}>Patente:</Text>
@@ -120,15 +142,28 @@ export default function PerfilUsuario({ navigation }) {
                         <Ionicons name="time" size={20} color="#FFD700" />
                         <Text style={styles.sectionTitle}>Atividade Recente</Text>
                     </View>
-                    {atividadeRecente.length > 0 ? (
+
+                    {carregandoAtividades ? (
+                        <ActivityIndicator size="small" color="#FFD700" style={{ marginVertical: 20 }} />
+                    ) : atividadeRecente.length > 0 ? (
                         atividadeRecente.map((atividade) => (
                             <View key={atividade.id} style={styles.atividadeItem}>
                                 <View style={styles.atividadeIcone}>
-                                    <Ionicons name={getAtividadeIcon(atividade.tipo)} size={20} color="#FFD700" />
+                                    <Ionicons
+                                        name={getAtividadeIcon(atividade.tipo)}
+                                        size={20}
+                                        color="#FFD700"
+                                    />
                                 </View>
+
                                 <View style={styles.atividadeInfo}>
-                                    <Text style={styles.atividadeDesc}>{atividade.descricao}</Text>
-                                    <Text style={styles.atividadeData}>{atividade.data}</Text>
+                                    <Text style={styles.atividadeAcao}>{atividade.acao}</Text>
+                                    <Text style={styles.atividadeDesc} numberOfLines={2}>
+                                        {atividade.descricao}
+                                    </Text>
+                                    <Text style={styles.atividadeData}>
+                                        {formatarData(atividade.data)}
+                                    </Text>
                                 </View>
                             </View>
                         ))
@@ -142,6 +177,7 @@ export default function PerfilUsuario({ navigation }) {
                         <Ionicons name="settings" size={20} color="#FFD700" />
                         <Text style={styles.sectionTitle}>Ações</Text>
                     </View>
+
                     <TouchableOpacity
                         style={styles.actionButton}
                         onPress={() => navigation.navigate('AtualizarDados', { user })}
@@ -162,8 +198,12 @@ export default function PerfilUsuario({ navigation }) {
                 </View>
 
                 <View style={styles.versionContainer}>
-                    <Text style={styles.versionText}>SGM-{VERSAO_ATUAL} - Sistema de Gestão Militar Integrada</Text>
-                    <Text style={styles.versionSubtext}>Versão - {VERSAO_ATUAL} - © 2026 Exército Brasileiro</Text>
+                    <Text style={styles.versionText}>
+                        SGM-{VERSAO_ATUAL} - Sistema de Gestão Militar Integrada
+                    </Text>
+                    <Text style={styles.versionSubtext}>
+                        Versão - {VERSAO_ATUAL} - © 2026 Exército Brasileiro
+                    </Text>
                 </View>
             </View>
         </ScrollView>
@@ -281,8 +321,14 @@ const styles = StyleSheet.create({
     atividadeInfo: {
         flex: 1,
     },
-    atividadeDesc: {
+    atividadeAcao: {
         fontSize: 13,
+        color: '#FFD700',
+        fontWeight: 'bold',
+        marginBottom: 2,
+    },
+    atividadeDesc: {
+        fontSize: 12,
         color: '#fff',
         marginBottom: 2,
     },

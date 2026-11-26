@@ -23,6 +23,8 @@ public interface AtividadesRepository extends JpaRepository<Atividades, Long> {
     
     List<Atividades> findTop10ByOrderByDataDesc();
     
+    List<Atividades> findTop10ByUsuarioIdOrderByDataDesc(Long usuarioId);
+    
     @Query("SELECT a FROM Atividades a WHERE a.usuarioId = :usuarioId AND a.tipo = :tipo ORDER BY a.data DESC")
     List<Atividades> findUltimasAtividadesPorTipo(
         @Param("usuarioId") Long usuarioId, 

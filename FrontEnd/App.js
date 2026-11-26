@@ -1,4 +1,4 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -15,8 +15,10 @@ import GerenciarUsuarios from './componentes/Usuario/GerenciarUsuarios';
 import AtualizarDados from './componentes/Usuario/AtualizarDados';
 import Atividades from './componentes/Usuario/Atividades';
 import AtribuirEquipamento from './componentes/Equipamentos/AtribuirEquipamento';
+import { IdleProvider } from './componentes/Usuario/utils/IdleProvider';
 
 const Stack = createNativeStackNavigator();
+const navigationRef = createNavigationContainerRef();
 
 export default function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -26,11 +28,7 @@ export default function App() {
         const checkLoginStatus = async () => {
             try {
                 const usuarioNome = await AsyncStorage.getItem("usuarioNome");
-                if (usuarioNome) {
-                    setIsLoggedIn(true);
-                } else {
-                    setIsLoggedIn(false);
-                }
+                setIsLoggedIn(!!usuarioNome);
             } catch (error) {
                 console.error('Erro ao verificar login:', error);
                 setIsLoggedIn(false);
@@ -38,7 +36,7 @@ export default function App() {
                 setIsLoading(false);
             }
         };
-        
+
         checkLoginStatus();
     }, []);
 
@@ -51,22 +49,24 @@ export default function App() {
     }
 
     return (
-        <NavigationContainer>
-            <Stack.Navigator initialRouteName={isLoggedIn ? "Principal" : "Login"}>
-                <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
-                <Stack.Screen name="Principal" component={Principal} options={{ headerShown: false }} />
-                <Stack.Screen name="CadastroUsuario" component={CadastroUsuario} options={{ headerShown: false }} />
-                <Stack.Screen name="Relatorios" component={Relatorios} options={{ headerShown: false }} />
-                <Stack.Screen name="PerfilUsuario" component={PerfilUsuario} options={{ headerShown: false }} />
-                <Stack.Screen name="AtualizarDados" component={AtualizarDados} options={{ headerShown: false }} />
-                <Stack.Screen name="ControleInsumos" component={ControleInsumos} options={{ headerShown: false }} />
-                <Stack.Screen name="GestaoPelotao" component={GestaoPelotao} options={{ headerShown: false }} />
-                <Stack.Screen name="GestaoEquipamentos" component={GestaoEquipamentos} options={{ headerShown: false }} />
-                <Stack.Screen name="GerenciarUsuarios" component={GerenciarUsuarios} options={{ headerShown: false }} />
-                <Stack.Screen name="Atividades" component={Atividades} options={{ headerShown: false }} />
-                <Stack.Screen name="AtribuirEquipamento" component={AtribuirEquipamento} options={{ headerShown: false }} />
-            </Stack.Navigator>
-        </NavigationContainer>
+        <IdleProvider navigationRef={navigationRef}>
+            <NavigationContainer ref={navigationRef}>
+                <Stack.Navigator initialRouteName={isLoggedIn ? "Principal" : "Login"}>
+                    <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
+                    <Stack.Screen name="Principal" component={Principal} options={{ headerShown: false }} />
+                    <Stack.Screen name="CadastroUsuario" component={CadastroUsuario} options={{ headerShown: false }} />
+                    <Stack.Screen name="Relatorios" component={Relatorios} options={{ headerShown: false }} />
+                    <Stack.Screen name="PerfilUsuario" component={PerfilUsuario} options={{ headerShown: false }} />
+                    <Stack.Screen name="AtualizarDados" component={AtualizarDados} options={{ headerShown: false }} />
+                    <Stack.Screen name="ControleInsumos" component={ControleInsumos} options={{ headerShown: false }} />
+                    <Stack.Screen name="GestaoPelotao" component={GestaoPelotao} options={{ headerShown: false }} />
+                    <Stack.Screen name="GestaoEquipamentos" component={GestaoEquipamentos} options={{ headerShown: false }} />
+                    <Stack.Screen name="GerenciarUsuarios" component={GerenciarUsuarios} options={{ headerShown: false }} />
+                    <Stack.Screen name="Atividades" component={Atividades} options={{ headerShown: false }} />
+                    <Stack.Screen name="AtribuirEquipamento" component={AtribuirEquipamento} options={{ headerShown: false }} />
+                </Stack.Navigator>
+            </NavigationContainer>
+        </IdleProvider>
     );
 }
 

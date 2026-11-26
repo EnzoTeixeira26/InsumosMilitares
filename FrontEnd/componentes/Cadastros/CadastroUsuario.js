@@ -4,6 +4,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from '@expo/vector-icons';
 import { API } from "../../config/api";
+import { registrarAtividade, TIPO_ATIVIDADE } from '../Services/AtividadeService';
 
 const PATENTES_EXERCITO = [
     "General de Exército",
@@ -137,6 +138,12 @@ export default function CadastroUsuario({ navigation }) {
             };
 
             await axios.post(API.usuario, userNovo);
+
+            await registrarAtividade(
+                'Cadastrar Usuário',
+                `Cadastrou o militar ${nome} (${novoIdentificador})`,
+                TIPO_ATIVIDADE.CADASTRO
+            );
             
             setModalVisible(true);
             
