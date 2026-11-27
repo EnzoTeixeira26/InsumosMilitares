@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Alert, FlatList } from "react-native";
+import { useState, useCallback } from "react";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, Alert, FlatList, RefreshControl } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +10,7 @@ import { registrarAtividade, TIPO_ATIVIDADE } from '../Services/AtividadeService
 export default function GerenciarUsuarios({ navigation }) {
     const [usuarios, setUsuarios] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [usuarioSelecionado, setUsuarioSelecionado] = useState(null);
     const [novoPerfil, setNovoPerfil] = useState('');
@@ -17,28 +19,11 @@ export default function GerenciarUsuarios({ navigation }) {
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [usuarioParaExcluir, setUsuarioParaExcluir] = useState(null);
 
-    useEffect(() => {
-        const init = async () => {
-            const perfil = await AsyncStorage.getItem('usuarioPerfil');
-            const idLogado = await AsyncStorage.getItem('usuarioId');
-
-            if (perfil !== 'ADMINISTRADOR') {
-                Alert.alert('Acesso Negado', 'Apenas administradores podem acessar esta tela.');
-                navigation.goBack();
-                return;
-            }
-
-            setUsuarioLogadoId(idLogado ? parseInt(idLogado) : null);
-            carregarUsuarios();
-        };
-        init();
-    }, []);
-
-    const carregarUsuarios = async () => {
-        setLoading(true);
+    const carregarUsuarios = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const response = await axios.get(API.usuario);
-            const dadosOrdenados = response.data.sort((a, b) => b.id - a.id)
+            const dadosOrdenados = response.data.sort((a, b) => b.id - a.id);
             setUsuarios(dadosOrdenados);
         } catch (error) {
             console.error('Erro ao carregar usuários:', error);
@@ -49,8 +34,33 @@ export default function GerenciarUsuarios({ navigation }) {
             ];
             setUsuarios(mockUsuarios);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            const init = async () => {
+                const perfil = await AsyncStorage.getItem('usuarioPerfil');
+                const idLogado = await AsyncStorage.getItem('usuarioId');
+
+                if (perfil !== 'ADMINISTRADOR') {
+                    Alert.alert('Acesso Negado', 'Apenas administradores podem acessar esta tela.');
+                    navigation.goBack();
+                    return;
+                }
+
+                setUsuarioLogadoId(idLogado ? parseInt(idLogado) : null);
+                carregarUsuarios();
+            };
+            init();
+        }, [navigation, carregarUsuarios])
+    );
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await carregarUsuarios(true);
+        setRefreshing(false);
     };
 
     const abrirModalPromocao = (usuario) => {
@@ -72,12 +82,12 @@ export default function GerenciarUsuarios({ navigation }) {
                 `Alterou o perfil de ${usuarioSelecionado.nome} para ${novoPerfil}`,
                 TIPO_ATIVIDADE.EDICAO
             );
-            
+
             Alert.alert(
-                'Sucesso', 
+                'Sucesso',
                 `${usuarioSelecionado.nome} foi ${novoPerfil === 'ADMINISTRADOR' ? 'promovido a Administrador' : 'rebaixado para Operador'}!`
             );
-            
+
             setModalVisible(false);
             carregarUsuarios();
         } catch (error) {
@@ -119,9 +129,6 @@ export default function GerenciarUsuarios({ navigation }) {
     };
 
     const renderUsuario = ({ item }) => {
-        // Condição para mostrar o botão de excluir:
-        // 1. Não pode ser o próprio usuário logado (item.id !== usuarioLogadoId)
-        // 2. Não pode ser outro administrador (item.perfil !== 'ADMINISTRADOR')
         const podeExcluir = item.id !== usuarioLogadoId && item.perfil !== 'ADMINISTRADOR';
 
         return (
@@ -138,7 +145,7 @@ export default function GerenciarUsuarios({ navigation }) {
                         <Text style={styles.perfilBadgeText}>{item.perfil}</Text>
                     </View>
                 </View>
-                
+
                 <View style={styles.cardInfo}>
                     <View style={styles.infoRow}>
                         <Text style={styles.infoLabel}>Identificador:</Text>
@@ -149,7 +156,7 @@ export default function GerenciarUsuarios({ navigation }) {
                         <Text style={styles.infoValue}>{item.email || 'Não informado'}</Text>
                     </View>
                 </View>
-                
+
                 <View style={styles.cardActions}>
                     {item.perfil !== 'ADMINISTRADOR' && (
                         <TouchableOpacity style={styles.promoteButton} onPress={() => abrirModalPromocao(item)}>
@@ -157,7 +164,7 @@ export default function GerenciarUsuarios({ navigation }) {
                             <Text style={styles.actionText}>Promover</Text>
                         </TouchableOpacity>
                     )}
-                    
+
                     {podeExcluir && (
                         <TouchableOpacity style={styles.deleteButton} onPress={() => handleExcluirUsuario(item)}>
                             <Ionicons name="trash" size={18} color="#fff" />
@@ -170,7 +177,18 @@ export default function GerenciarUsuarios({ navigation }) {
     };
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView
+            style={styles.container}
+            contentContainerStyle={{ flexGrow: 1 }}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor="#FFD700"
+                    colors={["#FFD700"]}
+                />
+            }
+        >
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                     <Ionicons name="arrow-back" size={24} color="#FFD700" />
@@ -203,8 +221,8 @@ export default function GerenciarUsuarios({ navigation }) {
                     </View>
                 </View>
 
-                <TouchableOpacity 
-                    style={styles.addButton} 
+                <TouchableOpacity
+                    style={styles.addButton}
                     onPress={() => navigation.navigate('CadastroUsuario')}
                 >
                     <Ionicons name="add" size={24} color="#0a2a0a" />
@@ -245,15 +263,15 @@ export default function GerenciarUsuarios({ navigation }) {
                             {novoPerfil === 'ADMINISTRADOR' ? 'Promover Usuário' : 'Rebaixar Usuário'}
                         </Text>
                         <Text style={styles.modalText}>
-                            {novoPerfil === 'ADMINISTRADOR' 
+                            {novoPerfil === 'ADMINISTRADOR'
                                 ? `Deseja promover "${usuarioSelecionado?.nome}" para Administrador?`
                                 : `Deseja rebaixar "${usuarioSelecionado?.nome}" para Operador?`
                             }
                         </Text>
                         <Text style={styles.modalWarning}>
                             {novoPerfil === 'ADMINISTRADOR'
-                                ? '⚠️ O usuário terá acesso total ao sistema.'
-                                : '⚠️ O usuário perderá permissões administrativas.'
+                                ? 'O usuário terá acesso total ao sistema.'
+                                : 'O usuário perderá permissões administrativas.'
                             }
                         </Text>
                         <View style={styles.modalButtons}>
@@ -282,7 +300,7 @@ export default function GerenciarUsuarios({ navigation }) {
                             Deseja realmente excluir o usuário "{usuarioParaExcluir?.nome}"?
                         </Text>
                         <Text style={styles.modalWarning}>
-                            ⚠️ Esta ação não pode ser desfeita.
+                            Esta ação não pode ser desfeita.
                         </Text>
                         <View style={styles.modalButtons}>
                             <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => setDeleteModalVisible(false)}>

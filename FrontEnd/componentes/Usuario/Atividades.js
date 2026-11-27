@@ -179,7 +179,6 @@ export default function Atividades({ navigation }) {
                 <Text style={styles.headerSubtitle}>Histórico de ações dos usuários</Text>
             </View>
 
-            {/* Barra de Filtros */}
             <View style={styles.filtroBar}>
                 <TouchableOpacity 
                     style={styles.filtroButton} 
@@ -201,7 +200,6 @@ export default function Atividades({ navigation }) {
                 </TouchableOpacity>
             </View>
 
-            {/* Estatísticas */}
             <View style={styles.statsContainer}>
                 <View style={styles.statCard}>
                     <Text style={styles.statNumber}>{atividades.length}</Text>
@@ -219,7 +217,6 @@ export default function Atividades({ navigation }) {
                 </View>
             </View>
 
-            {/* Lista de Atividades */}
             {loading ? (
                 <View style={styles.loadingContainer}>
                     <Ionicons name="refresh-circle" size={40} color="#FFD700" />
@@ -245,7 +242,6 @@ export default function Atividades({ navigation }) {
                 </View>
             )}
 
-            {/* Modal de Filtros */}
             <Modal
                 transparent={true}
                 visible={modalFiltroVisible}
@@ -316,7 +312,6 @@ export default function Atividades({ navigation }) {
                 </View>
             </Modal>
 
-            {/* Modal de Detalhe da Atividade */}
             <Modal
                 transparent={true}
                 visible={modalDetalheVisible}
@@ -346,7 +341,6 @@ export default function Atividades({ navigation }) {
                 </View>
             </Modal>
 
-            {/* Modal de Mensagem */}
             <Modal
                 transparent={true}
                 visible={mensagemModalVisible}
